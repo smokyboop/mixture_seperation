@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>여러 가지 방법으로 혼합물 분리하기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden;}
+        
+        /* 기구 공통 스타일 */
+        .glass {
+            background: rgba(255, 255, 255, 0.4);
+            border: 2px solid #94a3b8;
+            backdrop-filter: blur(2px);
+            position: relative;
+        }
+        
+        .liquid {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            transition: height 1s linear, top 1s linear;
+        }
+
+        /* 비커 */
+        .beaker {
+            width: 80px; height: 100px;
+            border-radius: 0 0 10px 10px;
+            border-top: none;
+            overflow: hidden;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            margin: 0 auto;
+            cursor: pointer;
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.1);
+        }
+        .beaker::before {
+            content: ''; position: absolute; top: -2px; left: -5px; right: -5px; height: 4px; border: 2px solid #94a3b8; border-radius: 50%;
+        }
+
+        /* 분별 깔때기 */
+        .separatory-funnel {
+            width: 120px; height: 150px;
+            margin: 0 auto;
+            position: relative;
+            cursor: pointer;
+        }
+        .funnel-body {
+            width: 100%; height: 120px;
+            clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 55% 100%, 45% 100%, 0% 30%);
+            overflow: hidden;
+        }
+        .funnel-stem {
+            width: 10px; height: 30px;
+            margin: 0 auto;
+            border-top: none;
+            border-radius: 0 0 2px 2px;
+        }
+        .valve {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 30px; height: 10px; background-color: #475569;
+            cursor: pointer; border-radius: 5px; transition: transform 0.3s;
+            z-index: 10;
+        }
+        .valve.open { transform: translateX(-50%) rotate(90deg); background-color: #ef4444; }
+
+        /* 증류 장치 (단순화) */
+        .flask {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: absolute; bottom: 40px; left: 20px;
+            overflow: hidden;
+        }
+        .flask-neck {
+            width: 30px; height: 60px;
+            position: absolute; bottom: 130px; left: 55px;
+            border-bottom: none; border-radius: 5px 5px 0 0;
+        }
+        .distillation-tube {
+            position: absolute; bottom: 140px; left: 85px;
+            width: 150px; height: 10px;
+            background: rgba(255,255,255,0.6); border: 2px solid #94a3b8;
+            border-radius: 5px; transform: rotate(15deg); transform-origin: left center;
+        }
+        .test-tube {
+            width: 30px; height: 100px;
+            border-radius: 0 0 15px 15px; border-top: none;
+            position: absolute; bottom: 20px; left: 220px;
+            overflow: hidden;
+        }
+        .heater {
+            width: 120px; height: 30px;
+            background: #334155; border-radius: 5px;
+            position: absolute; bottom: 10px; left: 10px;
+        }
+        
+        /* 혼합물 색상 */
+        .color-oil { background-color: rgba(234, 179, 8, 0.7); } /* 올리브유 노란색 */
+        .color-water { background-color: rgba(186, 230, 253, 0.5); } /* 물/에탄올/소금 혼합 투명 파란색 */
+
+        /* 애니메이션 효과 */
+        .drop {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 15px; background: rgba(186, 230, 253, 0.8);
+            border-radius: 2px; animation: fall 0.5s linear infinite;
+            display: none; z-index: 5;
+        }
+        @keyframes fall { 0% { top: -10px; opacity: 1; } 100% { top: 40px; opacity: 0; } }
+
+        .bubble {
+            position: absolute; background: white; border-radius: 50%;
+            animation: rise 1s infinite ease-in; opacity: 0;
+        }
+        @keyframes rise { 0% { bottom: 0; opacity: 0.8; transform: scale(0.5); } 100% { bottom: 100%; opacity: 0; transform: scale(1.2); } }
+        
+        /* 무대 인터랙션 힌트 */
+        .clickable:hover { box-shadow: 0 0 10px 3px rgba(59, 130, 246, 0.5); transform: scale(1.02); transition: all 0.2s; }
+        .active-tool { border: 2px solid #3b82f6; background-color: #eff6ff; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen text-gray-800">
+
+    <!-- 왼쪽/중앙: 가상 실험 공간 -->
+    <main class="flex-1 flex flex-col h-full bg-white relative">
+        <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center z-20">
+            <div>
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    혼합물 분리 실험실
+                </h1>
+                <p class="text-sm opacity-80 mt-1">물, 올리브유, 에탄올, 소금 혼합물 분리하기</p>
+            </div>
+            <div id="step-indicator" class="text-lg font-bold bg-blue-800 px-4 py-2 rounded-full shadow-inner">
+                준비 단계
+            </div>
+        </header>
+
+        <!-- 가이드 메시지 -->
+        <div id="guide-msg" class="absolute top-24 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-lg z-30 transition-all duration-300 text-center min-w-[300px]">
+            <p class="font-bold">안내</p>
+            <p id="guide-text" class="text-sm mt-1">하단의 도구상자에서 필요한 도구를 클릭하여 실험대에 올려주세요.</p>
+        </div>
+
+        <!-- 실험 무대 (Stage) -->
+        <div id="stage" class="flex-1 bg-gray-50 relative overflow-hidden flex items-center justify-center p-8 border-b-4 border-gray-300">
+            <!-- 백그라운드 그리드 효과 -->
+            <div class="absolute inset-0" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; opacity: 0.3;"></div>
+            
+            <!-- 이곳에 JS를 통해 기구들이 동적으로 배치됨 -->
+            <div id="stage-container" class="relative w-full h-full max-w-2xl mx-auto flex items-end justify-center pb-10 gap-10">
+                <!-- 초기 상태: 혼합물 비커 -->
+                <div id="mix-beaker" class="glass beaker clickable relative z-10 transform scale-125 transition-transform" onclick="interact('mix-beaker')">
+                    <div class="absolute inset-x-0 bottom-full text-center text-xs font-bold text-gray-600 mb-2">혼합물</div>
+                    <div id="mix-oil" class="liquid color-oil" style="height: 40%; top: 40%;"></div>
+                    <div id="mix-water" class="liquid color-water" style="height: 60%; top: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 도구 상자 -->
+        <div class="h-40 bg-gray-200 border-t border-gray-300 p-4 flex flex-col justify-center z-20">
+            <h3 class="text-sm font-bold text-gray-500 mb-2">도구 상자 (필요한 도구를 클릭하세요)</h3>
+            <div id="toolbox" class="flex gap-4 overflow-x-auto pb-2">
+                <!-- 1단계 도구 -->
+                <button onclick="selectTool('separatory-funnel')" id="tool-separatory-funnel" class="flex flex-col items-center p-2 bg-white border rounded shadow hover:bg-blue-50 transition min-w-[80px]">
+                    <div class="w-10 h-10 glass funnel-body !w-6 !h-8 scale-75 transform origin-top"></div>
+                    <span class="text-xs mt-2 font-medium">분별 깔때기</span>
+                </button>
+                <button onclick="selectTool('empty-beaker')" id="tool-empty-beaker" class="flex flex-col items-center p-2 bg-white border rounded shadow hover:bg-blue-50 transition min-w-[80px]">
+                    <div class="w-8 h-10 glass rounded-b-md border-t-0 border-2"></div>
+                    <span class="text-xs mt-2 font-medium">빈 비커</span>
+                </button>
+                
+                <!-- 2, 3단계 도구 (초기 숨김) -->
+                <button onclick="selectTool('distillation')" id="tool-distillation" class="hidden flex-col items-center p-2 bg-white border rounded shadow hover:bg-blue-50 transition min-w-[80px]">
+                    <div class="w-8 h-8 glass rounded-full border-2 relative">
+                        <div class="absolute w-2 h-4 glass border-2 border-b-0 left-1/2 transform -translate-x-1/2 -top-4"></div>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">증류 장치</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 우측: 실험 보고서 (교과서 포맷) -->
+    <aside class="w-full md:w-96 bg-yellow-50 border-l border-gray-300 p-6 flex flex-col h-1/3 md:h-full overflow-y-auto shadow-[-5px_0_15px_rgba(0,0,0,0.05)] z-30">
+        <h2 class="text-xl font-bold text-gray-800 border-b-2 border-gray-800 pb-2 mb-4">탐구 기록장</h2>
+        
+        <div class="space-y-6 flex-1">
+            <!-- 1단계 영역 -->
+            <div id="report-step-1" class="bg-white rounded-lg p-4 shadow-sm border border-green-200 transition-all">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full border border-green-300">1단계</span>
+                    <h3 class="font-bold text-gray-700">밀도 차이를 이용한 분리</h3>
+                </div>
+                <div class="text-sm text-gray-600 mb-2 bg-gray-50 p-2 rounded">
+                    <strong>실험 과정:</strong> 분별 깔때기에 혼합물을 넣고 흔든 후 가만히 두어 층이 나누어지면, 아래층 액체를 분리한다.
+                </div>
+                <div class="flex items-center gap-2 bg-green-50 p-2 rounded">
+                    <span class="font-bold text-sm text-gray-700">분리된 물질:</span>
+                    <input type="text" id="result-1" readonly class="flex-1 bg-transparent border-b border-gray-400 focus:outline-none text-blue-600 font-bold text-center px-2" placeholder="(실험을 진행하세요)">
+                </div>
+            </div>
+
+            <!-- 2단계 영역 -->
+            <div id="report-step-2" class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 opacity-50 transition-all">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full border border-blue-300">2단계</span>
+                    <h3 class="font-bold text-gray-700">끓는점 차이를 이용한 분리 (1)</h3>
+                </div>
+                <div class="text-sm text-gray-600 mb-2 bg-gray-50 p-2 rounded">
+                    <strong>실험 과정:</strong> 남은 수용액을 증류 장치에 넣고 가열하여 약 78℃에서 끓어나오는 기체를 냉각하여 모은다.
+                </div>
+                <div class="flex items-center gap-2 bg-blue-50 p-2 rounded">
+                    <span class="font-bold text-sm text-gray-700">분리된 물질:</span>
+                    <input type="text" id="result-2" readonly class="flex-1 bg-transparent border-b border-gray-400 focus:outline-none text-blue-600 font-bold text-center px-2" placeholder="">
+                </div>
+            </div>
+
+            <!-- 3단계 영역 -->
+            <div id="report-step-3" class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 opacity-50 transition-all">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded-full border border-purple-300">3단계</span>
+                    <h3 class="font-bold text-gray-700">끓는점 차이를 이용한 분리 (2)</h3>
+                </div>
+                <div class="text-sm text-gray-600 mb-2 bg-gray-50 p-2 rounded">
+                    <strong>실험 과정:</strong> 남은 소금물을 증류 장치에 담아 가열하여 100℃에서 물을 기화시켜 분리해낸다.
+                </div>
+                <div class="flex items-center gap-2 bg-purple-50 p-2 rounded">
+                    <span class="font-bold text-sm text-gray-700">분리된 물질:</span>
+                    <input type="text" id="result-3" readonly class="flex-1 bg-transparent border-b border-gray-400 focus:outline-none text-blue-600 font-bold text-center px-2" placeholder="">
+                </div>
+            </div>
+        </div>
+
+        <button id="btn-next-step" onclick="proceedToNextStep()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors hidden">
+            다음 단계로 넘어가기
+        </button>
+    </aside>
+
+<script>
+    // --- 상태 관리 ---
+    const state = {
+        currentStep: 1,
+        activeTool: null,
+        mixInFunnel: false,
+        beakerUnderFunnel: false,
+        valveOpen: false,
+        separation1Done: false, // 1단계 완료
+        
+        mixInFlask: false, // 2,3 단계 모두 사용
+        heating2Done: false, // 2단계 완료
+        heating3Done: false, // 3단계 완료
+    };
+
+    // DOM 요소
+    const stageContainer = document.getElementById('stage-container');
+    const guideMsg = document.getElementById('guide-msg');
+    const guideText = document.getElementById('guide-text');
+    const stepIndicator = document.getElementById('step-indicator');
+    const btnNextStep = document.getElementById('btn-next-step');
+
+    // 가이드 메시지 업데이트 함수
+    function showGuide(text, type='info') {
+        guideText.innerText = text;
+        guideMsg.className = `absolute top-24 left-1/2 transform -translate-x-1/2 p-4 rounded shadow-lg z-30 transition-all duration-300 text-center min-w-[300px] font-bold`;
+        if (type === 'error') guideMsg.classList.add('bg-red-100', 'border-l-4', 'border-red-500', 'text-red-700');
+        else if (type === 'success') guideMsg.classList.add('bg-green-100', 'border-l-4', 'border-green-500', 'text-green-700');
+        else guideMsg.classList.add('bg-yellow-100', 'border-l-4', 'border-yellow-500', 'text-yellow-700');
+        
+        guideMsg.style.transform = 'translate(-50%, -10px)';
+        setTimeout(() => guideMsg.style.transform = 'translate(-50%, 0)', 150);
+    }
+
+    // --- 도구 선택 및 무대 배치 로직 ---
+    function selectTool(toolName) {
+        if (state.currentStep === 1 && state.separation1Done) return;
+        if (state.currentStep === 2 && state.heating2Done) return;
+        if (state.currentStep === 3 && state.heating3Done) return;
+
+        // 버튼 하이라이트 해제
+        document.querySelectorAll('#toolbox button').forEach(btn => btn.classList.remove('active-tool'));
+        document.getElementById(`tool-${toolName}`).classList.add('active-tool');
+        state.activeTool = toolName;
+
+        if (state.currentStep === 1) {
+            if (toolName === 'separatory-funnel' && !document.getElementById('stage-funnel')) {
+                const funnelHtml = `
+                    <div id="stage-funnel" class="flex flex-col items-center relative transition-all duration-500 transform translate-y-10 opacity-0 mb-32" style="width: 150px;">
+                        <div class="glass funnel-body relative clickable" onclick="interact('funnel')">
+                            <div id="funnel-oil" class="liquid color-oil" style="height: 0%; top: 0%;"></div>
+                            <div id="funnel-water" class="liquid color-water" style="height: 0%; top: auto;"></div>
+                        </div>
+                        <div class="glass funnel-stem relative">
+                            <div id="valve-btn" class="valve" onclick="interact('valve')"></div>
+                            <div id="drop-anim" class="drop" style="top: 15px;"></div>
+                        </div>
+                        <div class="absolute text-xs text-gray-500 font-bold whitespace-nowrap" style="bottom: -110px;">분별 깔때기</div>
+                    </div>
+                `;
+                stageContainer.insertAdjacentHTML('beforeend', funnelHtml);
+                setTimeout(() => {
+                    document.getElementById('stage-funnel').classList.remove('translate-y-10', 'opacity-0');
+                }, 50);
+                showGuide("혼합물이 담긴 비커를 클릭하여 분별 깔때기에 부어주세요.");
+            } else if (toolName === 'empty-beaker' && !document.getElementById('stage-empty-beaker')) {
+                const funnel = document.getElementById('stage-funnel');
+                if(!funnel) {
+                    showGuide("먼저 분별 깔때기를 설치하세요.", "error");
+                    document.getElementById(`tool-${toolName}`).classList.remove('active-tool');
+                    state.activeTool = null;
+                    return;
+                }
+                const beakerHtml = `
+                    <div id="stage-empty-beaker" class="glass beaker absolute transition-all duration-500 opacity-0" style="bottom: -85px; left: 50%; transform: translateX(-50%); width: 70px; height: 80px; z-index: 1; pointer-events: none;">
+                        <div id="received-liquid" class="liquid color-water" style="height: 0%;"></div>
+                    </div>
+                `;
+                funnel.insertAdjacentHTML('beforeend', beakerHtml);
+                setTimeout(() => {
+                    document.getElementById('stage-empty-beaker').classList.remove('opacity-0');
+                    state.beakerUnderFunnel = true;
+                    showGuide("준비가 되었습니다. 코크(회색 밸브)를 클릭하여 아래층 액체를 분리하세요.");
+                }, 50);
+                document.getElementById('tool-empty-beaker').style.display = 'none';
+            }
+        }
+        else if (state.currentStep === 2 || state.currentStep === 3) {
+             if (toolName === 'distillation' && !document.getElementById('stage-distillation')) {
+                 const currentBeaker = document.getElementById('mix-beaker');
+                 currentBeaker.style.position = 'absolute';
+                 currentBeaker.style.left = '10px';
+                 currentBeaker.style.transform = 'scale(0.8)';
+                 
+                 // 3단계일 때는 시험관 물을 진한 파란색으로, 2단계는 하늘색으로 설정
+                 const tubeColorClass = state.currentStep === 2 ? 'bg-cyan-200/90 border-cyan-300' : 'bg-blue-700/90 border-blue-800';
+                 
+                 const distHtml = `
+                    <div id="stage-distillation" class="relative w-full h-[300px] transition-all opacity-0">
+                        <div class="absolute bottom-[10px] left-[30px] w-[140px] h-[35px] bg-[#b0b8bc] rounded-md border-b-4 border-[#9aa2a6] flex justify-between items-center px-3 z-10">
+                            <button id="heat-btn-distill" onclick="interact('heat-distill')" class="bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 font-bold shadow transition-colors relative z-50">가열하기</button>
+                            <div id="heater-light" class="w-3 h-3 rounded-full bg-gray-500 shadow-inner"></div>
+                        </div>
+
+                        <div class="absolute bottom-[45px] left-[55px] flex flex-col items-center z-20 clickable hover:scale-105 transition-transform" onclick="interact('flask')">
+                            <div class="relative w-1.5 h-16 bg-white border border-gray-300 rounded-t-full -mb-2 z-30">
+                                <div id="thermo-liquid" class="absolute bottom-0 left-0 w-full bg-red-500 transition-all duration-300" style="height: 20%;"></div>
+                                <div class="absolute -bottom-1 left-[-2px] w-2.5 h-3 bg-red-500 rounded-full z-40"></div>
+                                <div id="thermometer-label" class="absolute top-2 left-3 bg-white/90 px-1.5 py-0.5 rounded shadow text-[10px] font-bold text-gray-700 whitespace-nowrap z-50">20℃</div>
+                            </div>
+                            <div class="w-8 h-4 bg-[#2c3e50] z-20 rounded-sm"></div>
+                            <div class="w-6 h-10 bg-white/60 border-l-2 border-r-2 border-gray-400 relative z-10"></div>
+                            
+                            <div class="w-[90px] h-[80px] bg-white/60 border-b-4 border-l-2 border-r-2 border-gray-400 relative overflow-hidden flex flex-col justify-end" style="clip-path: polygon(35% 0, 65% 0, 100% 100%, 0% 100%);">
+                                <!-- 작고 현실적인 소금 결정 SVG (초기 숨김) -->
+                                <div id="flask-salt" class="absolute bottom-[2px] left-[35%] w-[30%] transition-all duration-1000 z-10 flex items-end" style="height: 0%; opacity: 0; transform-origin: bottom center;">
+                                    <svg viewBox="0 0 100 50" class="w-full h-full drop-shadow-md" preserveAspectRatio="none">
+                                        <path d="M 10 50 L 30 25 L 50 15 L 70 25 L 90 50 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+                                        <path d="M 20 50 L 40 30 L 60 20 L 80 50 Z" fill="#cbd5e1" stroke="#64748b" stroke-width="1.5"/>
+                                        <path d="M 30 50 L 50 35 L 70 50 Z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+                                        <polygon points="45,25 47,23 50,26 48,27" fill="#475569" opacity="0.8"/>
+                                        <polygon points="60,35 62,32 65,34 63,37" fill="#475569" opacity="0.7"/>
+                                        <polygon points="35,40 38,36 41,39 37,42" fill="#64748b" opacity="0.7"/>
+                                    </svg>
+                                </div>
+                                <div id="flask-liquid" class="w-[150%] h-[0%] bg-blue-200/60 -ml-[25%] transition-all duration-1000 relative z-20">
+                                    <div id="bubble-container" class="absolute inset-0 overflow-hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="absolute bottom-[20px] left-[240px] w-[130px] h-[100px] bg-[#e0f2fe]/80 border-2 border-t-0 border-gray-400 rounded-b-xl z-10 flex flex-col justify-end shadow-inner overflow-hidden">
+                            <div class="absolute bottom-2 left-2 w-6 h-6 bg-white/60 rounded-sm shadow-sm transform rotate-12"></div>
+                            <div class="absolute bottom-10 left-[80px] w-5 h-5 bg-white/60 rounded-sm shadow-sm transform -rotate-12"></div>
+                        </div>
+
+                        <div class="absolute top-[155px] left-[270px] w-[22px] h-[100px] bg-white/40 border-2 border-t-0 border-gray-400 rounded-b-full transform -rotate-[20deg] origin-top z-20 overflow-hidden shadow-md flex flex-col justify-end backdrop-blur-sm">
+                            <div id="tube-liquid" class="w-full ${tubeColorClass} transition-all duration-1000 border-t-2" style="height: 0%;"></div>
+                        </div>
+
+                        <div class="absolute bottom-[20px] left-[240px] w-[130px] h-[100px] border-2 border-t-0 border-transparent rounded-b-xl z-30 pointer-events-none">
+                            <div class="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent rounded-b-xl"></div>
+                            <div class="absolute bottom-4 left-[30px] w-6 h-6 bg-white/90 rounded-sm shadow-sm transform rotate-45"></div>
+                            <div class="absolute bottom-2 left-[60px] w-7 h-7 bg-white/90 rounded-sm shadow-sm transform -rotate-6"></div>
+                            <div class="absolute bottom-[40px] left-[95px] w-6 h-6 bg-white/90 rounded-sm shadow-sm transform rotate-12"></div>
+                        </div>
+
+                        <svg class="absolute top-0 left-0 w-full h-full z-10" style="pointer-events: none;">
+                            <path d="M 110 145 Q 185 120 276 155" fill="transparent" stroke="#f97316" stroke-width="8" stroke-linecap="round"></path>
+                            <circle id="distill-drop" cx="0" cy="0" r="3" fill="white" display="none">
+                                <animateMotion dur="1.2s" repeatCount="indefinite" path="M 110 145 Q 185 120 276 155" />
+                            </circle>
+                        </svg>
+                    </div>
+                 `;
+                 stageContainer.innerHTML = '';
+                 stageContainer.appendChild(currentBeaker);
+                 stageContainer.insertAdjacentHTML('beforeend', distHtml);
+                 
+                 setTimeout(() => {
+                    document.getElementById('stage-distillation').classList.remove('opacity-0');
+                    showGuide("수용액이 담긴 비커를 클릭하여 둥근바닥 플라스크에 부어주세요.");
+                 }, 50);
+             }
+        }
+    }
+
+    // --- 무대 인터랙션 로직 ---
+    function interact(target) {
+        if (state.currentStep === 1) {
+            if (target === 'mix-beaker') {
+                const funnel = document.getElementById('stage-funnel');
+                if (funnel && !state.mixInFunnel) {
+                    const beaker = document.getElementById('mix-beaker');
+                    beaker.style.transform = 'scale(0.8) translateY(-100px) rotate(-45deg)';
+                    beaker.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        beaker.style.display = 'none';
+                        document.getElementById('funnel-water').style.height = '60%';
+                        document.getElementById('funnel-oil').style.height = '40%';
+                        document.getElementById('funnel-oil').style.top = '0';
+                        
+                        state.mixInFunnel = true;
+                        showGuide("액체가 두 층으로 나뉘었습니다. 밀도가 작은 올리브유가 위로 뜹니다. 빈 비커를 준비하세요.");
+                    }, 500);
+                } else if (!funnel) {
+                    showGuide("먼저 도구 상자에서 분별 깔때기를 설치하세요.", "error");
+                }
+            } else if (target === 'valve') {
+                if (!state.mixInFunnel) return showGuide("먼저 혼합물을 분별 깔때기에 넣으세요.", "error");
+                if (!state.beakerUnderFunnel) return showGuide("아래층 액체를 받을 빈 비커를 먼저 설치하세요.", "error");
+                if (state.separation1Done) return;
+                
+                const valve = document.getElementById('valve-btn');
+                const dropAnim = document.getElementById('drop-anim');
+                const fWater = document.getElementById('funnel-water');
+                const fOil = document.getElementById('funnel-oil');
+                const rLiquid = document.getElementById('received-liquid');
+
+                if (!state.valveOpen) {
+                    valve.classList.add('open');
+                    dropAnim.style.display = 'block';
+                    state.valveOpen = true;
+                    showGuide("코크를 열어 아래층 액체를 분리합니다...", "info");
+
+                    fWater.style.height = '0%';
+                    fOil.style.top = '60%';
+                    rLiquid.style.height = '70%';
+
+                    setTimeout(() => {
+                        valve.classList.remove('open');
+                        dropAnim.style.display = 'none';
+                        state.valveOpen = false;
+                        state.separation1Done = true;
+                        
+                        document.getElementById('result-1').value = "올리브유";
+                        document.getElementById('result-1').classList.add('bg-green-100');
+                        document.getElementById('report-step-1').classList.add('ring-2', 'ring-green-400');
+                        
+                        showGuide("분리가 완료되었습니다! 우측 버튼을 눌러 다음 단계로 진행하세요.", "success");
+                        btnNextStep.style.display = 'block';
+                    }, 2000);
+                }
+            }
+        }
+        else if (state.currentStep === 2 || state.currentStep === 3) {
+             if (target === 'flask') {
+                 if(!state.mixInFlask) {
+                     const beaker = document.getElementById('mix-beaker');
+                     beaker.style.transform = 'scale(0.8) translateY(-100px) translateX(60px) rotate(-45deg)';
+                     beaker.style.opacity = '0';
+                     
+                     setTimeout(() => {
+                        beaker.style.display = 'none';
+                        // 2단계는 에탄올+물+소금이므로 좀 더 많고, 3단계는 물+소금
+                        document.getElementById('flask-liquid').style.height = state.currentStep === 2 ? '60%' : '30%';
+                        state.mixInFlask = true;
+                        showGuide("가열 장치를 켜서 증류를 시작하세요.");
+                     }, 500);
+                 }
+             } else if (target === 'heat-distill') {
+                 if (!state.mixInFlask) return showGuide("플라스크에 혼합물을 먼저 넣으세요.", "error");
+                 if (state.currentStep === 2 && state.heating2Done) return;
+                 if (state.currentStep === 3 && state.heating3Done) return;
+                 
+                 const btn = document.getElementById('heat-btn-distill');
+                 btn.innerText = "가열 중...";
+                 btn.classList.replace('bg-red-500', 'bg-orange-500');
+                 btn.disabled = true;
+                 
+                 const heaterLight = document.getElementById('heater-light');
+                 heaterLight.classList.replace('bg-gray-500', 'bg-red-500');
+                 heaterLight.classList.add('animate-pulse');
+                 
+                 const thermoLabel = document.getElementById('thermometer-label');
+                 const thermoLiquid = document.getElementById('thermo-liquid');
+                 const bubbleContainer = document.getElementById('bubble-container');
+                 let temp = 20;
+                 
+                 // 2단계는 78도(에탄올), 3단계는 100도(물)에서 끓음
+                 const targetTemp = state.currentStep === 2 ? 78 : 100;
+                 const substance = state.currentStep === 2 ? "에탄올" : "물";
+                 
+                 const createBubble = () => {
+                     const b = document.createElement('div');
+                     b.className = 'bubble w-2 h-2 absolute';
+                     b.style.left = `${Math.random() * 70 + 15}%`;
+                     b.style.animationDuration = `${Math.random() * 0.5 + 0.5}s`;
+                     bubbleContainer.appendChild(b);
+                     setTimeout(() => b.remove(), 1000);
+                 };
+                 let bubbleInterval;
+
+                 const heatInterval = setInterval(() => {
+                     temp += 2;
+                     thermoLabel.innerText = `${temp}℃`;
+                     thermoLiquid.style.height = `${Math.min(90, (temp/120)*100)}%`; // 시각적 눈금 조정
+                     
+                     if (temp > 50 && !bubbleInterval) {
+                         bubbleInterval = setInterval(createBubble, 100);
+                     }
+
+                     if (temp >= targetTemp) {
+                         clearInterval(heatInterval);
+                         thermoLabel.innerText = `${targetTemp}℃ (유지)`;
+                         thermoLabel.classList.add('text-red-600');
+                         
+                         showGuide(`${substance}이(가) 끓어올라 기화된 후 냉각관을 지나 다시 액체가 됩니다.`);
+                         
+                         document.getElementById('distill-drop').style.display = 'block';
+                         
+                         if (state.currentStep === 2) {
+                             document.getElementById('flask-liquid').style.height = '20%';
+                         } else {
+                             document.getElementById('flask-liquid').style.height = '0%';
+                             // 3단계일 때는 소금이 조금 남는 효과 연출
+                             setTimeout(() => {
+                                 const salt = document.getElementById('flask-salt');
+                                 salt.style.height = '15%'; // 작게 남음
+                                 salt.style.opacity = '1';
+                             }, 500);
+                         }
+                         
+                         setTimeout(() => {
+                             document.getElementById('tube-liquid').style.height = '50%';
+                         }, 500);
+
+                         setTimeout(() => {
+                             clearInterval(bubbleInterval);
+                             document.getElementById('distill-drop').style.display = 'none';
+                             
+                             heaterLight.classList.replace('bg-red-500', 'bg-gray-500');
+                             heaterLight.classList.remove('animate-pulse');
+                             
+                             btn.innerText = "완료";
+                             btn.classList.replace('bg-orange-500', 'bg-gray-400');
+                             
+                             if (state.currentStep === 2) {
+                                 state.heating2Done = true;
+                                 document.getElementById('result-2').value = "에탄올";
+                                 document.getElementById('result-2').classList.add('bg-blue-100');
+                                 document.getElementById('report-step-2').classList.add('ring-2', 'ring-blue-400');
+                                 showGuide("에탄올 분리가 완료되었습니다! 다음 단계로 진행하세요.", "success");
+                                 btnNextStep.style.display = 'block';
+                             } else {
+                                 state.heating3Done = true;
+                                 document.getElementById('result-3').value = "물, 정제 소금";
+                                 document.getElementById('result-3').classList.add('bg-purple-100');
+                                 document.getElementById('report-step-3').classList.add('ring-2', 'ring-purple-400');
+                                 showGuide("모든 분리 과정이 완료되었습니다! 수고하셨습니다.", "success");
+                                 btnNextStep.innerText = "실험 완료 (처음으로)";
+                                 btnNextStep.style.display = 'block';
+                             }
+                         }, 3500);
+                     }
+                 }, 100); // 애니메이션 속도
+             }
+        }
+    }
+
+    // --- 단계 전환 로직 ---
+    function proceedToNextStep() {
+        btnNextStep.style.display = 'none';
+        
+        if (state.currentStep === 1) {
+            state.currentStep = 2;
+            stepIndicator.innerText = "2단계";
+            stepIndicator.className = "text-lg font-bold bg-blue-800 px-4 py-2 rounded-full shadow-inner ring-2 ring-blue-300";
+            
+            document.getElementById('report-step-1').classList.add('opacity-50');
+            document.getElementById('report-step-2').classList.remove('opacity-50');
+            
+            document.getElementById('tool-separatory-funnel').style.display = 'none';
+            document.getElementById('tool-empty-beaker').style.display = 'none';
+            document.getElementById('tool-distillation').style.display = 'flex';
+            
+            stageContainer.innerHTML = '';
+            const newBeakerHtml = `
+                <div id="mix-beaker" class="glass beaker clickable relative z-10 transform scale-100 transition-transform" onclick="interact('flask')">
+                    <div class="absolute inset-x-0 bottom-full text-center text-xs font-bold text-gray-600 mb-2">남은 수용액</div>
+                    <div id="mix-water" class="liquid color-water" style="height: 50%;"></div>
+                </div>
+            `;
+            stageContainer.innerHTML = newBeakerHtml;
+            
+            showGuide("2단계: 끓는점 차이를 이용하여 에탄올을 분리합니다. 하단에서 증류 장치를 선택하세요.");
+        } 
+        else if (state.currentStep === 2) {
+            state.currentStep = 3;
+            state.mixInFlask = false; // 플라스크 붓기 상태 초기화
+            
+            stepIndicator.innerText = "3단계";
+            stepIndicator.className = "text-lg font-bold bg-purple-800 px-4 py-2 rounded-full shadow-inner ring-2 ring-purple-300";
+            
+            document.getElementById('report-step-2').classList.add('opacity-50');
+            document.getElementById('report-step-3').classList.remove('opacity-50');
+            
+            // 3단계에서도 증류 장치 재사용하므로 버튼 활성화 유지하되 상태 리셋
+            document.querySelectorAll('#toolbox button').forEach(btn => btn.classList.remove('active-tool'));
+            state.activeTool = null;
+            
+            stageContainer.innerHTML = '';
+            const newBeakerHtml = `
+                <div id="mix-beaker" class="glass beaker clickable relative z-10 transform scale-100 transition-transform" onclick="interact('flask')">
+                    <div class="absolute inset-x-0 bottom-full text-center text-xs font-bold text-gray-600 mb-2">소금물</div>
+                    <div id="mix-water" class="liquid color-water" style="height: 30%;"></div>
+                </div>
+            `;
+            stageContainer.innerHTML = newBeakerHtml;
+            
+            showGuide("3단계: 남은 소금물에서 물과 소금을 분리합니다. 하단의 증류 장치를 다시 선택하세요.");
+        }
+        else if (state.currentStep === 3) {
+            location.reload();
+        }
+    }
+
+    window.onload = () => {
+        showGuide("실험을 시작합니다. 먼저 혼합물에서 밀도 차이를 이용해 올리브유를 분리합시다. 분별 깔때기를 클릭하세요.");
+        stepIndicator.innerText = "1단계";
+    };
+
+</script>
+</body>
+</html>
